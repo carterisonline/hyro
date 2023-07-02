@@ -5,9 +5,17 @@ edition = "2021"
 description = "Hypermedia Rust Orchestration - a refreshing web framework"
 authors = ["Carter Reeb <me@carteris.online>"]
 repository = "https://github.com/carterisonline/hyro"
+homepage = "https://github.com/carterisonline/hyro"
+license = "MIT"
+documentation = "https://docs.rs/hyro"
+readme = "README.md"
+categories = ["http-server", "web-programming", "template-engine"]
 
 [dependencies]
-axum = { git = "https://github.com/tokio-rs/axum", features = ["ws", "macros"] }
+axum = { git = "https://github.com/tokio-rs/axum", rev = "466cfcddf737d6ab33c4c438dd9461d2fc75a1e8", features = [
+    "ws",
+    "macros",
+] }
 futures = "0.3"
 if-addrs = "0.10"
 lightningcss = { version = "1.0.0-alpha.43", features = [
@@ -22,4 +30,4 @@ tokio = { version = "1", default-features = false }
 tower-http = { version = "0.4", features = ["fs", "trace"] }
 
 [workspace]
-members = [ "examples/*" ]
+members = ["examples/*"]
