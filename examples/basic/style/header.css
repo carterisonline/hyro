@@ -1,0 +1,89 @@
+body > header {
+	border-radius: 4px;
+	position: fixed;
+	padding: 0;
+	margin: 1em;
+	width: auto;
+
+	& aside {
+		color: var(--primary);
+		font-size: small;
+		margin-top: -4px;
+	}
+
+	& > details[role="list"] {
+		margin-bottom: 0em;
+
+		& hgroup[role="img"] {
+			margin: 0;
+
+			& > span {
+				font-weight: 600;
+				color: #93a1b6;
+			}
+		}
+
+		& > summary:not([role]) {
+			width: fit-content;
+			border: none;
+			border-radius: 4px;
+			color: white !important;
+			background-color: #fff1 !important;
+			backdrop-filter: var(--fake-blur);
+			padding: 2em 2em 2.25em 2em;
+
+			& > * {
+				top: -1em;
+				position: relative;
+			}
+
+			&:hover {
+				cursor: pointer;
+			}
+
+			&:focus {
+				outline: 1px solid var(--primary);
+			}
+		}
+
+		& > summary::after {
+			content: url("/assets/chevron.svg");
+			top: -1em;
+			position: relative;
+			background: none;
+			margin-left: 1em;
+			width: 2em;
+			transition: transform 0.1s;
+		}
+
+		& > [role="listbox"] {
+			border-radius: 4px;
+			margin-top: 0.5em;
+			background: linear-gradient(to bottom right, #3a4d69, #2b384b);
+			display: grid;
+			grid-template-columns: 1fr;
+			grid-template-rows: repeat(8, 1fr);
+			grid-column-gap: 3px;
+			grid-row-gap: 3px;
+
+			& > button[role="link"].product-card {
+				color: white;
+				padding: 1em 1.5em;
+				display: flex;
+				flex-direction: column;
+				row-gap: 0.5em;
+				background: linear-gradient(
+					to bottom right,
+					#fff0,
+					var(--primary) 300%
+				);
+				grid-row: span 3;
+			}
+		}
+	}
+
+	&:hover > details[role="list"] > summary::after,
+	& > details[role="list"] > summary:focus::after {
+		transform: rotate(90deg) translateX(0.25em) translateY(-0.25em);
+	}
+}

@@ -1,0 +1,15 @@
+@import "header.css";
+
+:root:not([data-theme]) {
+	--background-color: #1e293b !important;
+	--color: white;
+	--fake-blur: contrast(0.05) brightness(0.5) sepia() hue-rotate(180deg)
+		contrast(1.6) saturate(0.8);
+	--primary: #9faff4;
+	background-image: url("/assets/topography.svg");
+	background-size: cover;
+}
+
+.flex {
+	display: flex;
+}

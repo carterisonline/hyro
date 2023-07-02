@@ -1,0 +1,15 @@
+{
+	"emmet.includeLanguages": {
+		"html": "html",
+	},
+
+	// go away yucky
+	"files.exclude": {
+		"target": true,
+		"Cargo.lock": true
+	},
+
+	// If you've enabled autosave, then this settings lets you witness
+	// the incredible speed of HYRO's HMR
+	"files.autoSaveDelay": 0
+}
