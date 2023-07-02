@@ -5,9 +5,8 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 pub use minijinja;
 
-use axum::body::Body;
 use axum::extract::{ws, ConnectInfo, WebSocketUpgrade};
-use axum::response::Response;
+use axum::response::IntoResponse;
 use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -26,7 +25,7 @@ static CONNECTIONS: AtomicU8 = AtomicU8::new(0);
 pub(crate) async fn hmr_websocket_handler(
     ConnectInfo(ip): ConnectInfo<SocketAddr>,
     ws: WebSocketUpgrade,
-) -> Response<Body> {
+) -> impl IntoResponse {
     let ip = ip.ip();
     ws.on_upgrade(move |mut socket| async move {
         let conn_id = CONNECTIONS.fetch_add(1, Ordering::SeqCst);

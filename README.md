@@ -20,7 +20,7 @@ Let's start with dependencies:
 ```sh
 cargo new hyro-getting-started
 cargo add hyro
-cargo add axum --git https://github.com/tokio-rs/axum
+cargo add axum
 cargo add tokio -F full
 mkdir templates
 ```
@@ -46,7 +46,10 @@ async fn main() {
       .route("/hello", axum::routing::get(hello))
       .into_service_with_hmr();
 
-   axum::serve(hyro::bind("0.0.0.0:1380").await, router).await.unwrap();
+   axum::Server::from_tcp(hyro::bind("0.0.0.0:1380").await)).unwrap()
+        .serve(router)
+        .await
+        .unwrap();
 }
 
 async fn hello(template: Template) -> axum::response::Html {

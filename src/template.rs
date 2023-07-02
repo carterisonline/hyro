@@ -1,9 +1,10 @@
-use axum::async_trait;
 #[cfg(debug_assertions)]
 use axum::extract::ConnectInfo;
-use axum::extract::{FromRequest, MatchedPath, Request};
+use axum::extract::{FromRequest, MatchedPath};
+use axum::http::Request;
 use axum::response::Html;
 use axum::RequestPartsExt;
+use axum::async_trait;
 use minijinja::value::Value;
 
 use std::collections::HashMap;
@@ -34,10 +35,11 @@ impl Template {
 }
 
 #[async_trait]
-impl<S> FromRequest<S> for Template
+impl<S, B> FromRequest<S, B> for Template
 where
-    axum::Form<HashMap<String, String>>: FromRequest<S>,
+    axum::Form<HashMap<String, String>>: FromRequest<S, B>,
     S: Send + Sync,
+    B: Send + 'static,
 {
     type Rejection = ();
 
@@ -60,7 +62,7 @@ where
     }
 
     #[cfg(debug_assertions)]
-    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = req.into_parts();
 
         let endpoint = parts

@@ -12,10 +12,7 @@ readme = "README.md"
 categories = ["http-server", "web-programming", "template-engine"]
 
 [dependencies]
-axum = { git = "https://github.com/tokio-rs/axum", rev = "466cfcddf737d6ab33c4c438dd9461d2fc75a1e8", features = [
-    "ws",
-    "macros",
-] }
+axum = { version = "0.6", features = ["ws", "macros"] }
 futures = "0.3"
 if-addrs = "0.10"
 lightningcss = { version = "1.0.0-alpha.43", features = [

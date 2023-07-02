@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-axum = { git = "https://github.com/tokio-rs/axum" }
+axum = "0.6"
 tokio = { version = "1", features = ["full"] }
 hyro = { path = "../../" }
 tower-http = "0.4"

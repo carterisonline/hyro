@@ -18,11 +18,10 @@ pub use minijinja::context;
 use once_cell::sync::Lazy;
 pub use router::*;
 pub use template::*;
-use tokio::net::TcpListener;
+use std::net::TcpListener;
 
 pub async fn bind(addr: &'static str) -> TcpListener {
     let listener = TcpListener::bind(addr)
-        .await
         .unwrap_or_else(|_| panic!("Failed to bind to address: {addr}"));
 
     let port = match listener.local_addr() {

@@ -21,7 +21,13 @@ async fn main() -> Result<(), std::io::Error> {
         .nest_service("/assets", ServeDir::new("assets"))
         .into_service_with_hmr();
 
-    axum::serve(hyro::bind("0.0.0.0:1380").await, router).await
+    axum::Server::from_tcp(hyro::bind("0.0.0.0:1380").await)
+        .unwrap()
+        .serve(router)
+        .await
+        .unwrap();
+
+    Ok(())
 }
 
 async fn index(template: Template) -> Html<String> {
