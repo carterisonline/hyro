@@ -1,6 +1,7 @@
 #[cfg(debug_assertions)]
 mod hmr;
 
+mod app;
 mod render;
 mod router;
 pub mod style;
@@ -17,12 +18,12 @@ use std::sync::RwLock;
 pub use minijinja::context;
 use once_cell::sync::Lazy;
 pub use router::*;
-pub use template::*;
 use std::net::TcpListener;
+pub use template::*;
 
 pub async fn bind(addr: &'static str) -> TcpListener {
-    let listener = TcpListener::bind(addr)
-        .unwrap_or_else(|_| panic!("Failed to bind to address: {addr}"));
+    let listener =
+        TcpListener::bind(addr).unwrap_or_else(|_| panic!("Failed to bind to address: {addr}"));
 
     let port = match listener.local_addr() {
         Ok(addr) => addr.port(),

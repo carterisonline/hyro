@@ -15,6 +15,7 @@ categories = ["http-server", "web-programming", "template-engine"]
 axum = { version = "0.6", features = ["ws", "macros"] }
 futures = "0.3"
 if-addrs = "0.10"
+infer = "0.14.0"
 lightningcss = { version = "1.0.0-alpha.43", features = [
     "bundler",
     "browserslist",
