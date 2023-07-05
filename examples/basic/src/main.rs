@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use axum::response::Html;
 use axum::routing::get;
 
@@ -30,20 +32,20 @@ async fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-async fn index(template: Template) -> Html<String> {
+async fn index(template: Template) -> Html<Cow<'static, str>> {
     template.render(context! {
         title => "Home",
     })
 }
 
-async fn navbar(template: Template) -> Html<String> {
+async fn navbar(template: Template) -> Html<Cow<'static, str>> {
     template.render(context!())
 }
 
-async fn hello(template: Template) -> Html<String> {
+async fn hello(template: Template) -> Html<Cow<'static, str>> {
     template.render(context!())
 }
 
-async fn splash(template: Template) -> Html<String> {
+async fn splash(template: Template) -> Html<Cow<'static, str>> {
     template.render(context!())
 }

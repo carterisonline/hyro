@@ -1,6 +1,6 @@
 [package]
 name = "hyro"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Hypermedia Rust Orchestration - a refreshing web framework"
 authors = ["Carter Reeb <me@carteris.online>"]
@@ -25,6 +25,14 @@ once_cell = "1"
 tap = "1"
 tokio = { version = "1", default-features = false }
 tower-http = { version = "0.4", features = ["fs", "trace"] }
+walkdir = "2"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "render"
+harness = false
 
 [workspace]
 members = ["examples/*"]

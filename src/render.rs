@@ -1,12 +1,19 @@
+use std::borrow::Cow;
+#[cfg(debug_assertions)]
 use std::path::Path;
+#[cfg(debug_assertions)]
 use std::sync::RwLock;
 
 use axum::response::Html;
 use minijinja::Environment;
 use once_cell::sync::Lazy;
-use tap::{Pipe, Tap};
+#[cfg(debug_assertions)]
+use tap::Pipe;
+use tap::Tap;
 
-use crate::{endpointof, path_of_endpoint, TEMPLATES};
+#[cfg(debug_assertions)]
+use crate::{endpointof, template_dir};
+use crate::{path_of_endpoint, TEMPLATES};
 
 #[cfg(debug_assertions)]
 const HMR_ENABLED: bool = true;
@@ -63,10 +70,31 @@ fn inject_hmr(template: &str) -> String {
     }
 }
 
+#[cfg(not(debug_assertions))]
 pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
     template: S,
     value: minijinja::value::Value,
-) -> Html<String> {
+) -> Html<Cow<'static, str>> {
+    let t = TEMPLATES.get(template.as_ref()).unwrap();
+
+    if t.1 {
+        match ENVIRONMENT.render_str(&t.0, value) {
+            Ok(t) => return Html(Cow::Owned(t)),
+            Err(e) => {
+                eprintln!("Error while rendering {}: {:?}", template.as_ref(), e);
+                return Html(Cow::Borrowed(""));
+            }
+        }
+    } else {
+        return Html(Cow::Borrowed(t.0.as_str()));
+    }
+}
+
+#[cfg(debug_assertions)]
+pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
+    template: S,
+    value: minijinja::value::Value,
+) -> Html<Cow<'static, str>> {
     init_template(template.as_ref());
 
     TEMPLATES
@@ -84,23 +112,21 @@ pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
         })
         .and_then(|t| {
             #[cfg(debug_assertions)]
-            return ENVIRONMENT.render_str(
+            return Ok(Cow::Owned(ENVIRONMENT.render_str(
                 &inject_hmr(&inject_template_path(template.as_ref(), &t)),
                 value,
-            );
-
-            #[cfg(not(debug_assertions))]
-            return ENVIRONMENT.render_str(&*t, value);
+            )?));
         })
         .pipe(|t| match t {
             Ok(t) => Html(t),
             Err(e) => {
                 eprintln!("Error while rendering {}: {:?}", template.as_ref(), e);
-                Html(String::new())
+                Html(Cow::Borrowed(""))
             }
         })
 }
 
+#[cfg(debug_assertions)]
 fn init_template(template: &str) {
     let is_none = TEMPLATES.sources.read().unwrap().get(template).is_none();
     if is_none {
@@ -108,11 +134,12 @@ fn init_template(template: &str) {
     }
 }
 
+#[cfg(debug_assertions)]
 pub(crate) fn reload_template(template_name: &str) {
     let p = &path_of_endpoint(template_name);
     let path = Path::new(p);
 
-    let template = std::fs::read_to_string(Path::new("templates").join(path)).unwrap();
+    let template = std::fs::read_to_string(template_dir().join(path)).unwrap();
     TEMPLATES
         .sources
         .write()

@@ -38,21 +38,25 @@ Then we can set up our boilerplate:
 `src/main.rs`
 
 ```rust
+use std::borrow::Cow;
+
+use axum::response::Html;
+use axum::{routing, Router, Server};
 use hyro::{context, RouterExt, Template};
 
 #[tokio::main]
 async fn main() {
-   let router = axum::Router::new()
-      .route("/hello", axum::routing::get(hello))
+   let router = Router::new()
+      .route("/hello", routing::get(hello))
       .into_service_with_hmr();
 
-   axum::Server::from_tcp(hyro::bind("0.0.0.0:1380").await)).unwrap()
+   Server::from_tcp(hyro::bind("0.0.0.0:1380").await)).unwrap()
         .serve(router)
         .await
         .unwrap();
 }
 
-async fn hello(template: Template) -> axum::response::Html {
+async fn hello(template: Template) -> Html<Cow<'static, str>> {
    template.render(context! {
       name => "World",
    })

@@ -14,9 +14,10 @@ use once_cell::sync::Lazy;
 use tokio::sync::broadcast;
 use tokio::time::Instant;
 
-use crate::{endpointof, TEMPLATES};
+use crate::render::reload_template;
+use crate::{endpointof, template_dir, TEMPLATES};
 
-static PWD: Lazy<PathBuf> = Lazy::new(|| std::env::current_dir().unwrap().join("templates"));
+static PWD: Lazy<PathBuf> = Lazy::new(|| std::env::current_dir().unwrap().join(template_dir()));
 static HMR_BROADCAST: Lazy<(broadcast::Sender<String>, broadcast::Receiver<String>)> =
     Lazy::new(|| broadcast::channel(1));
 
@@ -133,10 +134,6 @@ pub(crate) async fn hmr_websocket_handler(
 }
 
 async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Result<()> {
-    use std::time::Instant;
-
-    use crate::render::reload_template;
-
     let (mut watcher, mut rx) = async_watcher()?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
@@ -150,15 +147,18 @@ async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Resul
                 for path in paths {
                     let dur_start = Instant::now();
                     let path = path.strip_prefix(&*PWD).unwrap();
+
                     reload_template(&format!(
                         "/{}",
                         path.to_str().unwrap().trim_end_matches(".html.jinja2")
                     ));
+
                     eprintln!(
                         "\n(HMR) {}       (template render)  took {:?}",
                         path.display(),
                         dur_start.elapsed()
                     );
+
                     HMR_BROADCAST.0.send(path.display().to_string()).unwrap();
                 }
             }
@@ -172,7 +172,7 @@ async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Resul
 
 pub(crate) fn watch_templates() {
     tokio::spawn(async {
-        if let Err(e) = async_watch("templates").await {
+        if let Err(e) = async_watch(template_dir()).await {
             eprintln!("(HMR): {e}");
         }
     });

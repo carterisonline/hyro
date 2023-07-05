@@ -1,36 +1,46 @@
+use axum::async_trait;
 #[cfg(debug_assertions)]
 use axum::extract::ConnectInfo;
 use axum::extract::{FromRequest, MatchedPath};
 use axum::http::Request;
 use axum::response::Html;
 use axum::RequestPartsExt;
-use axum::async_trait;
 use minijinja::value::Value;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use std::net::SocketAddr;
 
+use crate::context;
 #[cfg(debug_assertions)]
 use crate::TEMPLATES;
 
 pub struct Template(pub String, pub HashMap<String, String>);
 
 impl Template {
-    pub fn render(self, context: Value) -> Html<String> {
-        let mut context = context
-            .try_iter()
-            .unwrap()
-            .fold(HashMap::new(), |mut h, k| {
-                h.insert(
-                    k.as_str().unwrap().to_string(),
-                    context.get_item(&k).unwrap(),
-                );
-                h
-            });
-        context.insert("form".into(), self.1.into());
+    pub fn render(self, context: Value) -> Html<Cow<'static, str>> {
+        if context.is_undefined() {
+            if self.1.is_empty() {
+                crate::render::render(self.0, context)
+            } else {
+                crate::render::render(self.0, context!(form => self.1))
+            }
+        } else {
+            let mut context = context
+                .try_iter()
+                .unwrap()
+                .fold(HashMap::new(), |mut h, k| {
+                    h.insert(
+                        k.as_str().unwrap().to_string(),
+                        context.get_item(&k).unwrap(),
+                    );
+                    h
+                });
+            context.insert("form".into(), self.1.into());
 
-        crate::render::render(self.0, context.into())
+            crate::render::render(self.0, context.into())
+        }
     }
 }
 
@@ -44,7 +54,7 @@ where
     type Rejection = ();
 
     #[cfg(not(debug_assertions))]
-    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = req.into_parts();
 
         let endpoint = parts
