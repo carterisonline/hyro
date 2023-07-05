@@ -3,6 +3,8 @@ use std::net::SocketAddr;
 #[cfg(debug_assertions)]
 use axum::extract::connect_info::IntoMakeServiceWithConnectInfo;
 use axum::response::IntoResponse;
+#[cfg(not(debug_assertions))]
+use axum::routing::IntoMakeService;
 use axum::Router;
 use lightningcss::stylesheet::ParserOptions;
 use lightningcss::targets::Targets;
@@ -15,7 +17,7 @@ pub trait RouterExt<S, C> {
     #[cfg(debug_assertions)]
     fn into_service_with_hmr(self) -> IntoMakeServiceWithConnectInfo<S, C>;
     #[cfg(not(debug_assertions))]
-    fn into_service_with_hmr(self) -> axum::Router;
+    fn into_service_with_hmr(self) -> IntoMakeService<Router>;
     fn with_bundled_css<P>(
         self,
         endpoint: &str,
@@ -39,8 +41,8 @@ impl RouterExt<Router, SocketAddr> for axum::Router {
         .into_make_service_with_connect_info::<SocketAddr>()
     }
     #[cfg(not(debug_assertions))]
-    fn into_service_with_hmr(self) -> axum::Router {
-        self
+    fn into_service_with_hmr(self) -> IntoMakeService<Router> {
+        self.into_make_service()
     }
 
     #[cfg(debug_assertions)]
