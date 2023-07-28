@@ -20,5 +20,13 @@ calls to minijinja or clone data. The only API difference is that endpoints prev
 | **0.2.0** | plain            | **39ns (25.6M /s)**  |
 
 ### Minor changes
+
 - Added `set_template_dir` for... setting the template directory. Defaults to `templates`.
 - Fixed an issue where `cargo check --release` would fail because of a missing generic at `src/template.rs:57`.
+
+## 0.2.1
+
+### Minor changes
+
+- Fixed an issue where changes to an `index` template wouldn't perform a full-reload and would render
+  to an incorrect and unused endpoint.

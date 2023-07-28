@@ -129,7 +129,14 @@ pub(crate) static TEMPLATES: Lazy<HashMap<String, (String, bool)>> = Lazy::new(|
 
 #[cfg(debug_assertions)]
 pub(crate) fn endpointof(path: &str) -> Option<String> {
-    Some(path.trim_end_matches(".html.jinja2").to_string())
+    let without_extension = path.trim_end_matches(".html.jinja2").to_string();
+    if without_extension == "/index" {
+        Some("/".into())
+    } else if without_extension == "index" {
+        Some(String::new())
+    } else {
+        Some(without_extension)
+    }
 }
 
 pub(crate) fn path_of_endpoint<S: AsRef<str>>(endpoint: S) -> String {
