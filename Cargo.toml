@@ -1,6 +1,6 @@
 [package]
 name = "hyro"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "Hypermedia Rust Orchestration - a refreshing web framework"
 authors = ["Carter Reeb <me@carteris.online>"]
@@ -15,13 +15,15 @@ categories = ["http-server", "web-programming", "template-engine"]
 axum = { version = "0.6", features = ["ws", "macros"] }
 futures = "0.3"
 if-addrs = "0.10"
-lightningcss = { version = "1.0.0-alpha.43", features = [
+lightningcss = { version = "1.0.0-alpha.44", features = [
     "bundler",
     "browserslist",
 ] }
-minijinja = "1"
+minijinja = { version = "1", features = ["unstable_machinery"] }
 notify = "6"
 once_cell = "1"
+parking_lot = "0.12"
+serde_urlencoded = "0.7"
 tap = "1"
 tokio = { version = "1", default-features = false }
 tower-http = { version = "0.4", features = ["fs", "trace"] }

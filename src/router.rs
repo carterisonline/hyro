@@ -6,8 +6,7 @@ use axum::response::IntoResponse;
 #[cfg(not(debug_assertions))]
 use axum::routing::IntoMakeService;
 use axum::Router;
-use lightningcss::stylesheet::ParserOptions;
-use lightningcss::targets::Targets;
+use std::path::Path;
 #[cfg(debug_assertions)]
 use tower_http::trace::TraceLayer;
 
@@ -18,15 +17,7 @@ pub trait RouterExt<S, C> {
     fn into_service_with_hmr(self) -> IntoMakeServiceWithConnectInfo<S, C>;
     #[cfg(not(debug_assertions))]
     fn into_service_with_hmr(self) -> IntoMakeService<Router>;
-    fn with_bundled_css<P>(
-        self,
-        endpoint: &str,
-        path: P,
-        parser_options: ParserOptions<'static, 'static>,
-        targets: Targets,
-    ) -> Self
-    where
-        String: From<P>;
+    fn with_bundled_css<P: AsRef<Path>>(self, endpoint: &str, main_css_path: P) -> Self;
 }
 
 impl RouterExt<Router, SocketAddr> for axum::Router {
@@ -46,39 +37,22 @@ impl RouterExt<Router, SocketAddr> for axum::Router {
     }
 
     #[cfg(debug_assertions)]
-    fn with_bundled_css<P>(
-        self,
-        endpoint: &str,
-        path: P,
-        parser_options: ParserOptions<'static, 'static>,
-        targets: Targets,
-    ) -> Self
-    where
-        String: From<P>,
-    {
-        crate::style::PATH.set(path.into()).unwrap();
-        crate::style::PARSER_OPTIONS.set(parser_options).unwrap();
-        crate::style::TARGETS.set(targets).unwrap();
+    fn with_bundled_css<P: AsRef<Path>>(self, endpoint: &str, main_css_path: P) -> Self {
+        use crate::hmr::watch_style;
+
+        crate::style::STYLE_MAIN_FILE
+            .set(main_css_path.as_ref().to_path_buf())
+            .unwrap();
+
+        watch_style();
 
         self.route(endpoint, axum::routing::get(main_css))
     }
 
     #[cfg(not(debug_assertions))]
-    fn with_bundled_css<P>(
-        self,
-        endpoint: &str,
-        path: P,
-        parser_options: ParserOptions<'static, 'static>,
-        targets: Targets,
-    ) -> Self
-    where
-        String: From<P>,
-    {
+    fn with_bundled_css<P: AsRef<Path>>(self, endpoint: &str, main_css_path: P) -> Self {
         crate::style::MAIN_CSS
-            .set(
-                crate::style::transform_css(String::from(path).as_str(), parser_options, targets)
-                    .unwrap(),
-            )
+            .set(crate::style::transform_css(&main_css_path.as_ref().to_path_buf()).unwrap())
             .unwrap();
 
         self.route(endpoint, axum::routing::get(main_css))
@@ -89,12 +63,7 @@ impl RouterExt<Router, SocketAddr> for axum::Router {
 async fn main_css() -> impl IntoResponse {
     (
         [("Content-Type", "text/css")],
-        crate::style::transform_css(
-            crate::style::PATH.get().unwrap(),
-            crate::style::PARSER_OPTIONS.get().unwrap().clone(),
-            *crate::style::TARGETS.get().unwrap(),
-        )
-        .unwrap(),
+        crate::style::transform_css(crate::style::STYLE_MAIN_FILE.get().unwrap()).unwrap(),
     )
 }
 

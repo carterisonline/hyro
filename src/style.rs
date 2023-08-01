@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub use lightningcss;
 pub use lightningcss::css_modules::{Config, Pattern};
@@ -9,12 +9,12 @@ use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::PrinterOptions;
 use once_cell::sync::{Lazy, OnceCell};
 
-pub static CARTERS_PARSER_OPTIONS: Lazy<ParserOptions> = Lazy::new(|| ParserOptions {
+static DEFAULT_STYLE_OPTIONS: Lazy<ParserOptions> = Lazy::new(|| ParserOptions {
     flags: ParserFlags::NESTING | ParserFlags::CUSTOM_MEDIA,
     ..Default::default()
 });
 
-pub static CARTERS_TARGET_OPTIONS: Lazy<Targets> = Lazy::new(|| Targets {
+static DEFAULT_STYLE_TARGETS: Lazy<Targets> = Lazy::new(|| Targets {
     browsers: Some(Browsers {
         android: None,
         chrome: Some(6160384),
@@ -32,13 +32,10 @@ pub static CARTERS_TARGET_OPTIONS: Lazy<Targets> = Lazy::new(|| Targets {
 pub(crate) static STYLE_FILE_PROVIDER: Lazy<FileProvider> = Lazy::new(FileProvider::new);
 #[cfg(not(debug_assertions))]
 pub(crate) static MAIN_CSS: OnceCell<String> = OnceCell::new();
-
 #[cfg(debug_assertions)]
-pub(crate) static PATH: OnceCell<String> = OnceCell::new();
-#[cfg(debug_assertions)]
-pub(crate) static PARSER_OPTIONS: OnceCell<ParserOptions> = OnceCell::new();
-#[cfg(debug_assertions)]
-pub(crate) static TARGETS: OnceCell<Targets> = OnceCell::new();
+pub(crate) static STYLE_MAIN_FILE: OnceCell<PathBuf> = OnceCell::new();
+pub(crate) static STYLE_OPTIONS: OnceCell<ParserOptions> = OnceCell::new();
+pub(crate) static STYLE_TARGETS: OnceCell<Targets> = OnceCell::new();
 
 #[derive(Debug)]
 pub(crate) enum TransformCSSError<'a> {
@@ -47,21 +44,24 @@ pub(crate) enum TransformCSSError<'a> {
 }
 
 /// Utility function for bundling and minifying CSS.
-pub(crate) fn transform_css<'a>(
-    path: &str,
-    options: ParserOptions<'a, 'a>,
-    browserslist: Targets,
-) -> Result<String, TransformCSSError<'a>> {
+pub(crate) fn transform_css<'a>(path: &PathBuf) -> Result<String, TransformCSSError<'a>> {
     // 1: Initialize the bundler state
-    let mut bundler = Bundler::new(&*STYLE_FILE_PROVIDER, None, options);
+    let mut bundler = Bundler::new(
+        &*STYLE_FILE_PROVIDER,
+        None,
+        STYLE_OPTIONS
+            .get()
+            .unwrap_or(&DEFAULT_STYLE_OPTIONS)
+            .clone(),
+    );
 
     // 2: Bundle the CSS by following @import statements
-    match bundler.bundle(Path::new(path)) {
+    match bundler.bundle(Path::new(&path)) {
         Ok(stylesheet) => {
             // 3: Since step 2 produced a rust-native stylesheet structure, we convert it back to CSS.
             let printed = stylesheet.to_css(PrinterOptions {
                 minify: true,
-                targets: browserslist,
+                targets: *STYLE_TARGETS.get().unwrap_or(&DEFAULT_STYLE_TARGETS),
                 ..Default::default()
             });
 

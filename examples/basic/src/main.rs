@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use axum::response::Html;
 use axum::routing::get;
 
-use hyro::style::{CARTERS_PARSER_OPTIONS, CARTERS_TARGET_OPTIONS};
 use hyro::{context, RouterExt, Template};
 use tower_http::services::ServeDir;
 
@@ -14,12 +13,7 @@ async fn main() -> Result<(), std::io::Error> {
         .route("/hello", get(hello))
         .route("/navbar", get(navbar))
         .route("/splash", get(splash))
-        .with_bundled_css(
-            "/main.css",
-            "style/.main.css",
-            CARTERS_PARSER_OPTIONS.clone(),
-            *CARTERS_TARGET_OPTIONS,
-        )
+        .with_bundled_css("/main.css", "style/.main.css")
         .nest_service("/assets", ServeDir::new("assets"))
         .into_service_with_hmr();
 

@@ -1,7 +1,5 @@
 const socket = new WebSocket(`ws://${location.host}/hmr`);
 
-const hmrIndexes = {};
-
 // i apologize for the rest of this file
 
 socket.addEventListener("message", async (event) => {
@@ -18,25 +16,25 @@ socket.addEventListener("message", async (event) => {
 
 				indexes[i] = parseInt(element.getAttribute("hmr-index"), 10);
 				i++;
-
-				element.removeAttribute("hmr-index");
 			}
 
-			hmrIndexes[event.data] = 0;
 			socket.send("c");
 			socket.send(indexes);
 			for (const element of elements) {
 				const response = await fetch(event.data).then((res) => res.text());
 				element.outerHTML = response;
 				if (response.includes("hx-")) {
+					// @ts-ignore
 					htmx.process(document.body);
 				}
 			}
 
+			let j = 0;
 			document
 				.querySelectorAll(`[hmr-path="${event.data}"]:not([hmr-index])`)
 				.forEach((element) => {
-					element.setAttribute("hmr-index", hmrIndexes[event.data]++);
+					element.setAttribute("hmr-index", indexes[j].toString());
+					j++;
 				});
 		}
 	} else if (event.data.size === 1) {
@@ -48,13 +46,17 @@ socket.addEventListener("message", async (event) => {
 	}
 });
 
+let hmrIndexes = {};
 document.addEventListener("DOMContentLoaded", () => {
 	document.body.addEventListener("htmx:load", (event) => {
 		let hmrPath;
+		// @ts-ignore
 		if (event.detail.elt.attributes.getNamedItem("hmr-path") !== null) {
+			// @ts-ignore
 			hmrPath = event.detail.elt.attributes.getNamedItem("hmr-path");
 		} else {
 			hmrPath =
+				// @ts-ignore
 				event.detail.elt.parentElement.attributes.getNamedItem("hmr-path");
 		}
 		if (!hmrIndexes[hmrPath.value]) {
@@ -64,7 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
 		document
 			.querySelectorAll(`[hmr-path="${hmrPath.value}"]:not([hmr-index])`)
 			.forEach((element) => {
-				element.setAttribute("hmr-index", hmrIndexes[hmrPath.value]++);
+				element.setAttribute(
+					"hmr-index",
+					(hmrIndexes[hmrPath.value]++).toString()
+				);
 			});
 	});
 });

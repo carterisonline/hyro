@@ -1,39 +1,52 @@
+use minijinja::value::{Value, ValueKind};
+use parking_lot::Mutex;
 use std::borrow::Cow;
 #[cfg(debug_assertions)]
 use std::path::Path;
-#[cfg(debug_assertions)]
-use std::sync::RwLock;
 
 use axum::response::Html;
 use minijinja::Environment;
 use once_cell::sync::Lazy;
-#[cfg(debug_assertions)]
-use tap::Pipe;
 use tap::Tap;
 
 #[cfg(debug_assertions)]
 use crate::{endpointof, template_dir};
-use crate::{path_of_endpoint, TEMPLATES};
+use crate::{path_of_endpoint, template_extension, TEMPLATES};
 
 #[cfg(debug_assertions)]
 const HMR_ENABLED: bool = true;
 #[cfg(not(debug_assertions))]
 const HMR_ENABLED: bool = false;
 
-static ENVIRONMENT: Lazy<Environment> = Lazy::new(|| {
-    Environment::new().tap_mut(|env| {
+pub(crate) static ENVIRONMENT: Lazy<Mutex<Environment>> = Lazy::new(|| {
+    Mutex::new(Environment::new().tap_mut(|env| {
         env.add_global("hmr", HMR_ENABLED);
         env.add_function("module", module);
-    })
+    }))
 });
 
-fn module(path: String) -> Result<String, minijinja::Error> {
+fn module(path: String, form: Option<Value>) -> Result<String, minijinja::Error> {
     let path = path_of_endpoint(path);
-    let path = path.trim_end_matches(".html.jinja2");
+    let path = path.trim_end_matches(template_extension());
 
-    Ok(format!(
-        r#"<div hx-trigger="revealed" hx-swap="outerHTML" hx-get="{path}"></div>"#
-    ))
+    match (form.as_ref().map(Value::kind), form) {
+        (Some(ValueKind::Map), Some(form)) => match serde_urlencoded::to_string(form) {
+            Ok(form) => Ok(format!(
+                r#"<div hx-trigger="revealed" hx-swap="outerHTML" hx-get="{path}?{form}"></div>"#,
+            )),
+            Err(e) => Err(minijinja::Error::new(
+                minijinja::ErrorKind::BadSerialization,
+                format!("invalid form data: {e}"),
+            )),
+        },
+        (Some(_), _) => Err(minijinja::Error::new(
+            minijinja::ErrorKind::BadSerialization,
+            "form data should be a map",
+        )),
+        (None, _) => Ok(format!(
+            r#"<div hx-trigger="revealed" hx-swap="outerHTML" hx-get="{path}"></div>"#
+        )),
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -72,21 +85,21 @@ fn inject_hmr(template: &str) -> String {
 
 #[cfg(not(debug_assertions))]
 pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
-    template: S,
+    template_name: S,
     value: minijinja::value::Value,
 ) -> Html<Cow<'static, str>> {
-    let t = TEMPLATES.get(template.as_ref()).unwrap();
+    let template = TEMPLATES.get(template_name.as_ref()).unwrap();
 
-    if t.1 {
-        match ENVIRONMENT.render_str(&t.0, value) {
+    if template.can_skip_rendering {
+        return Html(Cow::Borrowed(template.source.as_str()));
+    } else {
+        match ENVIRONMENT.lock().render_str(&template.source, value) {
             Ok(t) => return Html(Cow::Owned(t)),
             Err(e) => {
-                eprintln!("Error while rendering {}: {:?}", template.as_ref(), e);
+                error!("Error while rendering {}: {:?}", template_name.as_ref(), e);
                 return Html(Cow::Borrowed(""));
             }
         }
-    } else {
-        return Html(Cow::Borrowed(t.0.as_str()));
     }
 }
 
@@ -97,52 +110,61 @@ pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
 ) -> Html<Cow<'static, str>> {
     init_template(template.as_ref());
 
-    TEMPLATES
-        .sources
-        .read()
-        .unwrap()
-        .get(template.as_ref())
-        .unwrap()
-        .read()
-        .map_err(|_| {
-            minijinja::Error::new(
-                minijinja::ErrorKind::TemplateNotFound,
-                "Internal retrieval error",
-            )
-        })
-        .and_then(|t| {
-            #[cfg(debug_assertions)]
-            return Ok(Cow::Owned(ENVIRONMENT.render_str(
-                &inject_hmr(&inject_template_path(template.as_ref(), &t)),
-                value,
-            )?));
-        })
-        .pipe(|t| match t {
-            Ok(t) => Html(t),
-            Err(e) => {
-                eprintln!("Error while rendering {}: {:?}", template.as_ref(), e);
-                Html(Cow::Borrowed(""))
-            }
-        })
+    let template_sources = TEMPLATES.sources.lock();
+    let template_source = template_sources.get(template.as_ref()).unwrap().lock();
+
+    let maybe_rendered = ENVIRONMENT.lock().render_str(
+        &inject_hmr(&inject_template_path(template.as_ref(), &template_source)),
+        value,
+    );
+
+    match maybe_rendered {
+        Ok(t) => Html(Cow::Owned(t)),
+        Err(e) => {
+            error!("Error while rendering {}: {}", template.as_ref(), e);
+            Html(Cow::Borrowed(""))
+        }
+    }
 }
 
 #[cfg(debug_assertions)]
-fn init_template(template: &str) {
-    let is_none = TEMPLATES.sources.read().unwrap().get(template).is_none();
-    if is_none {
-        reload_template(template);
+fn init_template(template_name: &str) {
+    let template_exists = TEMPLATES.sources.lock().contains_key(template_name);
+    if !template_exists {
+        reload_template(
+            &template_dir()
+                .join(Path::new(template_name.trim_start_matches('/')))
+                .display()
+                .to_string(),
+        );
     }
 }
 
 #[cfg(debug_assertions)]
 pub(crate) fn reload_template(template_name: &str) {
-    let p = &path_of_endpoint(template_name);
-    let path = Path::new(p);
+    let _path = &path_of_endpoint(template_name);
+    let path = Path::new(_path);
 
-    let template = std::fs::read_to_string(template_dir().join(path)).unwrap();
-    TEMPLATES
-        .sources
-        .write()
-        .unwrap()
-        .insert(endpointof(template_name).unwrap(), RwLock::new(template));
+    let template_source = std::fs::read_to_string(path).unwrap();
+
+    match minijinja::machinery::parse(
+        &template_source,
+        &std::env::current_dir()
+            .unwrap()
+            .join(path)
+            .display()
+            .to_string(),
+    ) {
+        Ok(_) => {
+            TEMPLATES.sources.lock().insert(
+                endpointof(_path.trim_start_matches("templates"))
+                    .unwrap()
+                    .into(),
+                Mutex::new(template_source),
+            );
+        }
+        Err(e) => {
+            error!("{e}");
+        }
+    }
 }

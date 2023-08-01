@@ -5,7 +5,7 @@ use hyro::{context, Template};
 use tap::Tap;
 
 pub fn render_benchmark(c: &mut Criterion) {
-    hyro::set_template_dir("benches/templates").unwrap();
+    hyro::config::set_template_dir("benches/templates").unwrap();
     c.bench_function("render_form_and_context", |b| {
         b.iter(|| {
             Template(

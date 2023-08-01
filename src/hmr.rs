@@ -15,9 +15,11 @@ use tokio::sync::broadcast;
 use tokio::time::Instant;
 
 use crate::render::reload_template;
-use crate::{endpointof, template_dir, TEMPLATES};
+use crate::style::STYLE_MAIN_FILE;
+use crate::{endpointof, template_dir, template_extension, TEMPLATES};
 
-static PWD: Lazy<PathBuf> = Lazy::new(|| std::env::current_dir().unwrap().join(template_dir()));
+pub(crate) static PWD: Lazy<PathBuf> =
+    Lazy::new(|| std::env::current_dir().unwrap().join(template_dir()));
 static HMR_BROADCAST: Lazy<(broadcast::Sender<String>, broadcast::Receiver<String>)> =
     Lazy::new(|| broadcast::channel(1));
 
@@ -30,11 +32,10 @@ pub(crate) async fn hmr_websocket_handler(
     let ip = ip.ip();
     ws.on_upgrade(move |mut socket| async move {
         let conn_id = CONNECTIONS.fetch_add(1, Ordering::SeqCst);
-        TEMPLATES
-            .forms
-            .write()
-            .unwrap()
-            .insert(ip, Default::default());
+
+        // It took me. an hour. to find out this single line was breaking HMR.
+        // this is its grave.
+        //TEMPLATES.forms.lock().insert(ip, Default::default());
 
         let mut rx = HMR_BROADCAST.0.subscribe();
 
@@ -45,15 +46,16 @@ pub(crate) async fn hmr_websocket_handler(
                 .await
                 .is_err()
             {
-                eprintln!(
+                background!(
                     "(HMR) {} CONN{} (browser status)   connection closed",
-                    path, conn_id
+                    path,
+                    conn_id
                 );
                 CONNECTIONS.fetch_sub(1, Ordering::SeqCst);
                 return;
             }
 
-            if path.ends_with(".html.jinja2") {
+            if path.ends_with(template_extension()) {
                 let endpoint = format!("/{}", endpointof(&path).unwrap());
 
                 socket
@@ -68,7 +70,7 @@ pub(crate) async fn hmr_websocket_handler(
                     }
                 }
 
-                eprintln!(
+                background!(
                     "(HMR) {} CONN{} (browser status)   took {:?}",
                     path,
                     conn_id,
@@ -76,9 +78,10 @@ pub(crate) async fn hmr_websocket_handler(
                 );
 
                 if escape {
-                    eprintln!(
+                    background!(
                         "(HMR) {} CONN{} (browser status)   performing full reload",
-                        path, conn_id
+                        path,
+                        conn_id
                     );
                     CONNECTIONS.fetch_sub(1, Ordering::SeqCst);
                     socket.close().await.unwrap();
@@ -88,25 +91,10 @@ pub(crate) async fn hmr_websocket_handler(
                 dur_start = Instant::now();
 
                 if let Some(Ok(ws::Message::Binary(b))) = socket.recv().await {
-                    if !TEMPLATES.forms.read().unwrap().contains_key(&ip) {
-                        TEMPLATES
-                            .forms
-                            .write()
-                            .unwrap()
-                            .insert(ip, Default::default());
-                    }
+                    let forms = TEMPLATES.forms.lock();
+                    let mut ip_endpoint_history = forms.get(&ip).unwrap().lock();
 
-                    let r = TEMPLATES.forms.read().unwrap();
-                    let check = r.get(&ip).unwrap();
-
-                    if !check.read().unwrap().contains_key(&endpoint) {
-                        check
-                            .write()
-                            .unwrap()
-                            .insert(endpoint.clone(), Default::default());
-                    }
-
-                    check.write().unwrap().get_mut(&endpoint).unwrap().indexes = b
+                    ip_endpoint_history.get_mut(&endpoint).unwrap().indexes = b
                         .chunks(4)
                         .map(<[u8; 4] as TryFrom<&[u8]>>::try_from)
                         .map(Result::unwrap)
@@ -114,7 +102,7 @@ pub(crate) async fn hmr_websocket_handler(
                         .collect::<VecDeque<_>>();
                 }
 
-                eprintln!(
+                background!(
                     "(HMR) {} CONN{} (server form sync) took {:?}",
                     path,
                     conn_id,
@@ -128,14 +116,16 @@ pub(crate) async fn hmr_websocket_handler(
             }
         }
 
-        eprintln!("(HMR): Closed");
+        background!("(HMR): Closed");
         socket.close().await.unwrap();
     })
 }
 
-async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Result<()> {
+async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(watch_path: P) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
-    watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
+    watcher.watch(watch_path.as_ref(), RecursiveMode::Recursive)?;
+
+    let parent_path = watch_path.as_ref().parent().unwrap();
 
     while let Some(res) = rx.next().await {
         match res {
@@ -146,14 +136,12 @@ async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Resul
             }) => {
                 for path in paths {
                     let dur_start = Instant::now();
-                    let path = path.strip_prefix(&*PWD).unwrap();
+                    let relative_path = path.strip_prefix(parent_path).unwrap();
+                    let path = path.strip_prefix(watch_path.as_ref()).unwrap();
 
-                    reload_template(&format!(
-                        "/{}",
-                        path.to_str().unwrap().trim_end_matches(".html.jinja2")
-                    ));
+                    reload_template(&relative_path.display().to_string());
 
-                    eprintln!(
+                    background!(
                         "\n(HMR) {}       (template render)  took {:?}",
                         path.display(),
                         dur_start.elapsed()
@@ -162,7 +150,7 @@ async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Resul
                     HMR_BROADCAST.0.send(path.display().to_string()).unwrap();
                 }
             }
-            Err(e) => eprintln!("(HMR): {e:?}"),
+            Err(e) => error!("(HMR): {e:?}"),
             _ => (),
         }
     }
@@ -172,8 +160,24 @@ async fn async_watch<P: AsRef<Path> + std::fmt::Debug>(path: P) -> notify::Resul
 
 pub(crate) fn watch_templates() {
     tokio::spawn(async {
-        if let Err(e) = async_watch(template_dir()).await {
-            eprintln!("(HMR): {e}");
+        if let Err(e) = async_watch(&*PWD).await {
+            error!("(HMR): {e}");
+        }
+    });
+}
+
+pub(crate) fn watch_style() {
+    tokio::spawn(async {
+        let style_file = std::env::current_dir()
+            .unwrap()
+            .join(STYLE_MAIN_FILE.get().unwrap());
+
+        let style_path = style_file.parent().unwrap();
+
+        if style_path.strip_prefix(&*PWD).is_err() {
+            if let Err(e) = async_watch(style_path).await {
+                error!("(HMR): {e}");
+            }
         }
     });
 }

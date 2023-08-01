@@ -6,6 +6,7 @@ use axum::http::Request;
 use axum::response::Html;
 use axum::RequestPartsExt;
 use minijinja::value::Value;
+use once_cell::sync::OnceCell;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -15,6 +16,15 @@ use std::net::SocketAddr;
 use crate::context;
 #[cfg(debug_assertions)]
 use crate::TEMPLATES;
+
+pub(crate) static TEMPLATE_EXTENSION: OnceCell<String> = OnceCell::new();
+
+pub(crate) fn template_extension() -> &'static str {
+    match TEMPLATE_EXTENSION.get() {
+        Some(s) => s,
+        None => ".html.jinja2",
+    }
+}
 
 pub struct Template(pub String, pub HashMap<String, String>);
 
@@ -48,8 +58,8 @@ impl Template {
 impl<S, B> FromRequest<S, B> for Template
 where
     axum::Form<HashMap<String, String>>: FromRequest<S, B>,
-    S: Send + Sync,
-    B: Send + 'static,
+    S: Send + Sync + std::fmt::Debug,
+    B: Send + 'static + std::fmt::Debug,
 {
     type Rejection = ();
 
@@ -75,7 +85,7 @@ where
     async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = req.into_parts();
 
-        let endpoint = parts
+        let this_endpoint = parts
             .extract::<MatchedPath>()
             .await
             .map(|path| path.as_str().to_owned())
@@ -90,65 +100,42 @@ where
         let req = Request::from_parts(parts, body);
 
         match axum::Form::from_request(req, state).await {
-            Ok(axum::Form(mut form)) => {
+            Ok(axum::Form(form_from_request)) => {
+                let mut forms = TEMPLATES.forms.lock();
                 // 1: If this IP hasn't recorded any forms *at all*, create an empty history table.
-                if !TEMPLATES.forms.read().unwrap().contains_key(&ip) {
-                    TEMPLATES
-                        .forms
-                        .write()
-                        .unwrap()
-                        .insert(ip, Default::default());
+                forms.entry(ip).or_insert_with(Default::default);
+
+                let mut ip_endpoint_history = forms.get(&ip).unwrap().lock();
+
+                // 2: If this IP has not recorded a form for *this endpoint*, create an empty history for this endpoint.
+                if !ip_endpoint_history.contains_key(&this_endpoint) {
+                    ip_endpoint_history.insert(this_endpoint.to_string(), Default::default());
                 }
 
-                // important: block-scoped to avoid holding locks during an .await
-                {
-                    let endpoint_form_history = TEMPLATES.forms.read().unwrap();
-                    let ip_form_instances = endpoint_form_history.get(&ip).unwrap();
+                let form_history = ip_endpoint_history.get_mut(&this_endpoint).unwrap();
 
-                    // 2: If this IP has recorded a form for *this endpoint*, create an empty history for this endpoint.
-                    if !ip_form_instances.read().unwrap().contains_key(&endpoint) {
-                        ip_form_instances
-                            .write()
-                            .unwrap()
-                            .insert(endpoint.to_string(), Default::default());
+                // 3: The clientside HMR will assign an index for each element created.
+                //     when we request a reload, the client will give us the indexes for each element
+                //     that's still loaded. We can get something like [1, 3, 4] (elements 0 and 2 have been deleted),
+                //     and since the client updates each element in order, we can pop off the front of the indexes.
+                match form_history.indexes.pop_front() {
+                    Some(oldest_outdated_element_id) => {
+                        // 4: If there's an existing index, that means we're re-rendering an existing element with HMR magic.
+                        //     Hypermedia relies on form data, so we'll reuse the existing form data so we don't have to re-submit it.
+                        return Ok(Self(
+                            this_endpoint,
+                            form_history.contents[oldest_outdated_element_id as usize].clone(),
+                        ));
                     }
 
-                    // 3: The clientside HMR will assign an index for each element created.
-                    //     when we request a reload, the client will give us the indexes for each element
-                    //     that's still loaded. We can get something like [1, 3, 4] (elements 0 and 2 have been deleted),
-                    //     and since the client updates each element in order, we can pop off the front of the indexes.
-                    let top_form_index = ip_form_instances
-                        .write()
-                        .unwrap()
-                        .get_mut(&endpoint)
-                        .unwrap()
-                        .indexes
-                        .pop_front();
+                    None => {
+                        // 5: If there's nothing else in the queue, then we're rendering a new element!
+                        //     We'll save the requested form data instead and return the requested form.
+                        form_history.contents.push(form_from_request.clone());
 
-                    // 4: If there's an existing index, that means we're re-rendering an existing element with HMR magic.
-                    //     Hypermedia relies on form data, so we'll reuse the existing form data so we don't have to re-submit it.
-                    if let Some(existing_index) = top_form_index {
-                        form = ip_form_instances
-                            .read()
-                            .unwrap()
-                            .get(&endpoint)
-                            .unwrap()
-                            .contents[existing_index as usize]
-                            .clone();
-                    }
-                    // 5: If this element is new, we'll save the requested form data since we can't be in HMR at this point.
-                    else {
-                        ip_form_instances
-                            .write()
-                            .unwrap()
-                            .get_mut(&endpoint)
-                            .unwrap()
-                            .contents
-                            .push(form.clone());
+                        return Ok(Self(this_endpoint, form_from_request));
                     }
                 }
-
-                Ok(Self(endpoint, form))
             }
             Err(_) => Err(()),
         }

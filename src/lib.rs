@@ -1,6 +1,10 @@
+#[macro_use]
+mod log;
+
 #[cfg(debug_assertions)]
 mod hmr;
 
+pub mod config;
 mod render;
 mod router;
 pub mod style;
@@ -9,17 +13,22 @@ mod template;
 #[cfg(debug_assertions)]
 use std::collections::VecDeque;
 
+#[cfg(debug_assertions)]
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
-#[cfg(debug_assertions)]
-use std::sync::RwLock;
 
 pub use minijinja::context as _ctx;
 use once_cell::sync::{Lazy, OnceCell};
 pub use router::*;
 use std::net::TcpListener;
 pub use template::*;
+
+pub mod reexports {
+    pub use lightningcss;
+    pub use minijinja;
+}
 
 #[doc(hidden)]
 pub fn _empty_context() -> minijinja::value::Value {
@@ -39,10 +48,6 @@ macro_rules! context {
 
 static TEMPLATE_DIR: OnceCell<PathBuf> = OnceCell::new();
 
-pub fn set_template_dir<T: AsRef<Path>>(dir: T) -> Result<(), PathBuf> {
-    TEMPLATE_DIR.set(dir.as_ref().to_path_buf())
-}
-
 pub(crate) fn template_dir() -> PathBuf {
     TEMPLATE_DIR
         .get()
@@ -57,20 +62,20 @@ pub async fn bind(addr: &'static str) -> TcpListener {
     let port = match listener.local_addr() {
         Ok(addr) => addr.port(),
         Err(e) => {
-            eprintln!("Network error while retrieving port: \"{e}\". Defaulting to port 80");
+            error!("Network error while retrieving port: \"{e}\". Defaulting to port 80");
             80
         }
     };
 
     if let Ok(addrs) = if_addrs::get_if_addrs() {
-        println!("Listening on:");
+        info!("Listening on:");
         addrs
             .into_iter()
             .filter(|i| !i.name.starts_with("br-") && !i.name.starts_with("docker"))
             .map(|i| i.ip())
             .filter(IpAddr::is_ipv4)
             .for_each(|i| {
-                println!("http://{}:{}", i, port);
+                data!("http://{}:{}", i, port);
             })
     }
 
@@ -78,7 +83,7 @@ pub async fn bind(addr: &'static str) -> TcpListener {
 }
 
 #[cfg(debug_assertions)]
-type DB<T, U> = RwLock<HashMap<T, RwLock<U>>>;
+type DB<T, U> = Mutex<HashMap<T, Mutex<U>>>;
 
 #[cfg(debug_assertions)]
 #[derive(Debug, Default, Clone)]
@@ -98,7 +103,13 @@ pub(crate) struct Templates {
 pub(crate) static TEMPLATES: Lazy<Templates> = Lazy::new(Templates::default);
 
 #[cfg(not(debug_assertions))]
-pub(crate) static TEMPLATES: Lazy<HashMap<String, (String, bool)>> = Lazy::new(|| {
+pub(crate) struct TemplateSourceData {
+    pub source: String,
+    pub can_skip_rendering: bool,
+}
+
+#[cfg(not(debug_assertions))]
+pub(crate) static TEMPLATES: Lazy<HashMap<String, TemplateSourceData>> = Lazy::new(|| {
     walkdir::WalkDir::new(template_dir())
         .into_iter()
         .filter_map(Result::ok)
@@ -115,25 +126,28 @@ pub(crate) static TEMPLATES: Lazy<HashMap<String, (String, bool)>> = Lazy::new(|
                         .unwrap()
                         .to_string_lossy()
                         .to_string()
-                        .trim_end_matches(".html.jinja2")
+                        .trim_end_matches(template_extension())
                         .replace("index", "")
                 ),
-                (
-                    t.clone(),
-                    t.contains("{{") || t.contains("}}") || t.contains("{%") || t.contains("%}"),
-                ),
+                TemplateSourceData {
+                    source: t.clone(),
+                    can_skip_rendering: !(t.contains("{{")
+                        || t.contains("}}")
+                        || t.contains("{%")
+                        || t.contains("%}")),
+                },
             );
             acc
         })
 });
 
 #[cfg(debug_assertions)]
-pub(crate) fn endpointof(path: &str) -> Option<String> {
-    let without_extension = path.trim_end_matches(".html.jinja2").to_string();
+pub(crate) fn endpointof(path: &str) -> Option<&str> {
+    let without_extension = path.trim_end_matches(template_extension());
     if without_extension == "/index" {
-        Some("/".into())
+        Some("/")
     } else if without_extension == "index" {
-        Some(String::new())
+        Some("")
     } else {
         Some(without_extension)
     }
@@ -149,8 +163,8 @@ pub(crate) fn path_of_endpoint<S: AsRef<str>>(endpoint: S) -> String {
             endpoint.into()
         }
         .trim_start_matches('/'),
-        if PathBuf::from(endpoint).extension().is_none() {
-            ".html.jinja2"
+        if Path::new(endpoint).extension().is_none() {
+            template_extension()
         } else {
             ""
         }
