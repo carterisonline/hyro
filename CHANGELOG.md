@@ -1,3 +1,9 @@
+## 0.3.1
+
+### Minor Changes
+
+- Allowed overriding `form` when rendering a template
+
 ## 0.3.0
 
 ### **BREAKING CHANGES**
@@ -19,7 +25,7 @@ focuses on the `hyro::config` module, which provides simple APIs for... configur
   `.html.j2` that still works with intellisense.
 - Migrated existing configurables like template directory, style options, and style targets to the new API.
 
-## HMR Fixes
+### HMR Fixes
 
 - Fixed HMR not triggering for the styles directory if it wasn't configured as a child of the templates directory.
 - Fixed HMR rarely dropping form data. Some browsers wouldn't upgrade the HMR's websocket until a message was
@@ -31,7 +37,7 @@ focuses on the `hyro::config` module, which provides simple APIs for... configur
 - Fixed HMR garbling forms for out-of-order elements when re-rendering. Previously assumed that all elements were
   rendered in ascending order.
 
-## Minor changes
+### Minor changes
 
 - Added an optional second argument to the `module` template function that allows passing form data via. a map.
 - Added the `reexports` module, currently re-exporting minijinja and lightningcss

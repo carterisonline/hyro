@@ -1,0 +1,21 @@
+<form class="row" hx-target="this">
+    <input type="number" hidden name="id" value="{{ form.id }}" />
+    <div class="column small-1">
+        <input type="checkbox" {% if form.done=="true" %} checked {% endif %} _="on click if me.checked
+                increment #todos's @data-num-done else decrement #todos's @data-num-done
+            end
+            updateNumDone()
+            fetch `/todo-done?done={{ form.done }}&&id={{ form.id }}`
+            " />
+    </div>
+    <p data-tooltip="Created {{ form.created }}.{% if form.updated != form.created %} Updated {{ form.updated }}.{% endif %}"
+        class="column small-auto">
+        {{ form.description }}
+    </p>
+    <div style="margin: 0 0 1em 1.5em">
+        <img src="/assets/edit.svg" style="padding: 0.5em; border: none;" role="button" class="outline"
+            hx-get="/todo-edit?description={{ form.description }}&&id={{ form.id }}" hx-swap="outerHTML" />
+        <img src="/assets/trash.svg" style="padding: 0.5em; border: none;" role="button" class="outline"
+            hx-delete="/todo" _="on click remove the closest parent <form/> then updateNumDone()" />
+    </div>
+</form>

@@ -47,7 +47,10 @@ impl Template {
                     );
                     h
                 });
-            context.insert("form".into(), self.1.into());
+
+            if !context.contains_key("form") {
+                context.insert("form".into(), self.1.into());
+            }
 
             crate::render::render(self.0, context.into())
         }

@@ -12,7 +12,7 @@ noun
 
 ## Usage and Examples
 
-- A more in-depth example can be found at [examples/basic](examples/basic/). Make sure you `cd` to the path containing
+- More in-depth examples can be found at [examples/basic](examples/basic/) and [examples/crud](examples/crud/). Make sure you `cd` to the path containing
   the templates and style folders before running or _you will get a file-not-found error!_
 
 Let's start with dependencies:

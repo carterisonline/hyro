@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYRO Todo Example</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basicgrid@3/dist/basicGrid.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.4/dist/htmx.min.js"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.11/dist/_hyperscript.min.js"></script>
+    <script type="text/hyperscript">
+        def updateNumDone()
+            set tasks to #todos's children's length - 1
+            if tasks == 0
+                set #splash-1's innerHTML to "All caught up!"
+                set #splash-2's innerHTML to "What's on your mind?"
+            else
+                set #splash-1's innerHTML to `${tasks - #todos's @data-num-done} tasks left`    
+                set #splash-2's innerHTML to `Tracking ${tasks} tasks`
+        end
+    </script>
+</head>
+
+<body>
+    <main class="container-fluid">
+        <div id="todos" data-num-done="{{ num_done }}">
+            <hgroup style="text-align: center; margin-bottom: 5em" _="on load updateNumDone() end">
+                <h1 id="splash-1"></h1>
+                <p id="splash-2"></p>
+            </hgroup>
+
+            {% for todo_data in todos %}
+            {{ module("todo", todo_data) }}
+            {% endfor %}
+        </div>
+        <div class="column small-auto" style="text-align: center">
+            <p id="new-todo" role="button" hx-get="/todo-edit" hx-target="#todos" hx-swap="beforeend" hx-trigger="click"
+                _="on click hide me">+ New</p>
+        </div>
+    </main>
+</body>
+
+</html>

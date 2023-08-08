@@ -1,0 +1,13 @@
+<form hx-post="/todo" hx-swap="outerHTML" class="row">
+    {% if form %}
+    <input type="number" hidden name="id" value="{{ form.id }}" />
+    {% endif %}
+    <div class="column small-auto">
+        <input name="description" id="description" type="text" style="margin-right: 1em" required {% if form %} value="{{
+            form.description }}" {% endif %} />
+    </div>
+    <button type="submit" class="column small-1"
+        _="on click if #description's value is not empty then show #new-todo then updateNumDone()">
+        {% if form %}Update{% else %}Create{% endif %}
+    </button>
+</form>
