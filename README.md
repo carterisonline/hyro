@@ -1,14 +1,9 @@
-<div style="display: flex; place-items: center">
-   <div style="margin-right: auto">
-      <h3>HYRO</h3>
-      noun
-      <p>/ˈhɪr.oʊ/</p>
-   </div>
-   <div style="width: 10em">
-      <img alt="HYRO logo" src="./assets/hyro-dark.svg#gh-dark-mode-only"/>
-      <img alt="HYRO logo" src="./assets/hyro-light.svg#gh-light-mode-only">
-   </div>
-</div>
+<img alt="HYRO logo" src="./assets/hyro-dark.svg#gh-dark-mode-only" align="right" height="130" width="200"/>
+<img alt="HYRO logo" src="./assets/hyro-light.svg#gh-light-mode-only" align="right" height="130" width="200">
+
+### HYRO
+noun  
+/ˈhɪr.oʊ/
 
 1. A : acronym for "Hypermedia Rust Orchestration"  
    B : a crate that extends [Axum](https://github.com/tokio-rs/axum/) with new functionality, like
