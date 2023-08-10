@@ -37,7 +37,6 @@ dependencies = [
  "cfg-if",
  "getrandom",
  "once_cell",
- "serde",
  "version_check",
 ]
 
@@ -75,12 +74,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a30da5c5f2d5e72842e00bcb57657162cdabef0931f40e2deb9b4140440cecd"
 
 [[package]]
-name = "anyhow"
-version = "1.0.71"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c7d0618f0e0b7e8ff11427422b64564d5fb0be1940354bfe2e0529b18a9d9b8"
-
-[[package]]
 name = "async-trait"
 version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -114,7 +107,6 @@ checksum = "f8175979259124331c1d7bf6586ee7e0da434155e4b2d48ec2c8386281d8df39"
 dependencies = [
  "async-trait",
  "axum-core",
- "axum-macros",
  "base64 0.21.2",
  "bitflags 1.3.2",
  "bytes",
@@ -157,18 +149,6 @@ dependencies = [
  "rustversion",
  "tower-layer",
  "tower-service",
-]
-
-[[package]]
-name = "axum-macros"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bb524613be645939e280b7279f7b017f98cf7f5ef084ec374df373530e73277"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn 2.0.28",
 ]
 
 [[package]]
@@ -247,31 +227,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "browserslist-rs"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9bda9b4595376bf255f68dafb5dcc5b0e2842b38dc2a7b52c4e0bfe9fd1c651"
-dependencies = [
- "ahash 0.8.3",
- "anyhow",
- "chrono",
- "either",
- "getrandom",
- "itertools",
- "js-sys",
- "nom",
- "once_cell",
- "quote",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "string_cache",
- "string_cache_codegen",
- "thiserror",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -952,10 +907,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
 dependencies = [
  "cfg-if",
- "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1111,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "hyro"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "axum",
  "criterion",
@@ -1303,7 +1256,6 @@ checksum = "97cc864b2dc5f078725908d7be7b35ce934e156ff52db40643ba6cb55f813c14"
 dependencies = [
  "ahash 0.7.6",
  "bitflags 2.3.3",
- "browserslist-rs",
  "const-str",
  "cssparser",
  "dashmap",
@@ -1315,7 +1267,6 @@ dependencies = [
  "paste",
  "pathdiff",
  "rayon",
- "serde",
  "smallvec",
 ]
 
@@ -1448,12 +1399,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "new_debug_unreachable"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
-
-[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,6 +1498,9 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+dependencies = [
+ "parking_lot_core",
+]
 
 [[package]]
 name = "oorandom"
@@ -2131,17 +2079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3b4c031cd0d9014307d82b8abf653c0290fbdaeb4c02d00c63cf52f728628bf"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.180"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2505,32 +2442,6 @@ dependencies = [
  "sqlx-core",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "string_cache"
-version = "0.8.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f91138e76242f575eb1d3b38b4f1362f10d3a43f47d182a5b359af488a02293b"
-dependencies = [
- "new_debug_unreachable",
- "once_cell",
- "parking_lot",
- "phf_shared",
- "precomputed-hash",
- "serde",
-]
-
-[[package]]
-name = "string_cache_codegen"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb30289b722be4ff74a408c3cc27edeaad656e06cb1fe8fa9231fa59c728988"
-dependencies = [
- "phf_generator",
- "phf_shared",
- "proc-macro2",
- "quote",
 ]
 
 [[package]]

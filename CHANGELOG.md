@@ -1,3 +1,10 @@
+## 0.3.2
+
+### Minor Changes
+
+- Reduced dependencies
+- Added a new logo
+
 ## 0.3.1
 
 ### Minor Changes

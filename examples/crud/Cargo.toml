@@ -8,7 +8,7 @@ publish = false
 axum = "0.6"
 tokio = { version = "1", features = ["full"] }
 hyro = { path = "../../" }
-tower-http = "0.4"
+tower-http = { version = "0.4", default-features = false, features = ["fs"] }
 sqlx = { version = "0.7", features = [
     "runtime-tokio-native-tls",
     "sqlite",
