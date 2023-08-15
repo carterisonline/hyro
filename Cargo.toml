@@ -19,7 +19,7 @@ name = "render"
 harness = false
 
 [workspace]
-members = ["examples/*"]
+members = ["examples/basic-trillium"]
 
 [features]
 framework-axum = ["runtime-tokio", "dep:axum", "dep:tower-http"]

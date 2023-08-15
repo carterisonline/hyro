@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 
-pub use trillium_api::ApiConnExt;
 pub use trillium_websockets::WebSocketConn as WebSocket;
 
 pub type RenderedTemplate = Cow<'static, str>;
@@ -113,23 +112,23 @@ async fn main_css(conn: trillium::Conn) -> trillium::Conn {
 
 #[trillium::async_trait]
 pub trait ConnExt {
-    async fn template(&mut self) -> Result<Template, trillium_api::Value>;
+    async fn template(&mut self) -> Template;
 }
 
 #[trillium::async_trait]
 impl ConnExt for trillium::Conn {
     #[cfg(not(debug_assertions))]
-    async fn template(&mut self) -> Result<Template, trillium_api::Value> {
+    async fn template(&mut self) -> Template {
         let path = self.path().to_owned();
         let form: HashMap<String, String> =
             serde_urlencoded::from_str::<HashMap<String, String>>(self.querystring())
                 .unwrap_or_default();
 
-        Ok(Template { path, form })
+        Template { path, form }
     }
 
     #[cfg(debug_assertions)]
-    async fn template(&mut self) -> Result<Template, trillium_api::Value> {
+    async fn template(&mut self) -> Template {
         let path = self.path().to_owned();
         let ip = self.peer_ip().unwrap();
 
@@ -137,6 +136,6 @@ impl ConnExt for trillium::Conn {
             serde_urlencoded::from_str::<HashMap<String, String>>(self.querystring())
                 .unwrap_or_default();
 
-        Ok(crate::template::template_hydrate(ip, path, form))
+        crate::template::template_hydrate(ip, path, form)
     }
 }

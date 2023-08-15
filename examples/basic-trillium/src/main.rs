@@ -14,6 +14,6 @@ fn main() {
 }
 
 async fn index(mut conn: Conn) -> Conn {
-    let template = conn.template().await.unwrap();
+    let template = conn.template().await;
     conn.with_body(template.render(context!()).to_string())
 }
