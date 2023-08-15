@@ -1,6 +1,6 @@
 {
 	"emmet.includeLanguages": {
-		"html": "html"
+		"jinja-html": "html"
 	},
 
 	// go away yucky
@@ -12,6 +12,7 @@
 	// If you've enabled autosave, then this settings lets you witness
 	// the incredible speed of HYRO's HMR
 	"files.autoSaveDelay": 0,
+	"rust-analyzer.cargo.features": ["framework-trillium", "runtime-smol"],
 	"rust-analyzer.cargo.extraEnv": {
 		"DATABASE_URL": "sqlite:/tmp/hyro.db"
 	},

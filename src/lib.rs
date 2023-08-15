@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 #[macro_use]
 mod log;
 
@@ -5,10 +7,12 @@ mod log;
 mod hmr;
 
 pub mod config;
+mod framework;
 mod render;
-mod router;
+mod runtime;
 pub mod style;
 mod template;
+pub use framework::prelude;
 
 #[cfg(debug_assertions)]
 use std::collections::VecDeque;
@@ -21,7 +25,6 @@ use std::path::{Path, PathBuf};
 
 pub use minijinja::context as _ctx;
 use once_cell::sync::{Lazy, OnceCell};
-pub use router::*;
 use std::net::TcpListener;
 pub use template::*;
 
@@ -55,7 +58,7 @@ pub(crate) fn template_dir() -> PathBuf {
         .unwrap_or(PathBuf::from("templates"))
 }
 
-pub async fn bind(addr: &'static str) -> TcpListener {
+pub fn bind(addr: &'static str) -> TcpListener {
     let listener =
         TcpListener::bind(addr).unwrap_or_else(|_| panic!("Failed to bind to address: {addr}"));
 

@@ -8,7 +8,8 @@ use axum::routing::{delete, get, post};
 use axum::{Extension, Form, Router, Server};
 use chrono::NaiveDateTime;
 use eyre::{ContextCompat, Result};
-use hyro::{context, RouterExt, Template};
+use hyro::prelude::*;
+use hyro::{context, Template};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 use tower_http::services::ServeDir;
@@ -50,7 +51,7 @@ async fn main() -> Result<()> {
         .layer(Extension(pool))
         .into_service_with_hmr();
 
-    Server::from_tcp(hyro::bind("0.0.0.0:1380").await)?
+    Server::from_tcp(hyro::bind("0.0.0.0:1380"))?
         .serve(router)
         .await?;
 
@@ -106,7 +107,7 @@ async fn create_todo(
     template: Template,
 ) -> MaybeHypermedia {
     let id = if let (Some(description), Some(local_id)) =
-        (template.1.get("description"), template.1.get("id"))
+        (template.form.get("description"), template.form.get("id"))
     {
         sqlx::query("UPDATE todos SET description = $1 WHERE id = $2")
             .bind(description)
@@ -117,7 +118,7 @@ async fn create_todo(
         local_id.parse().map_err(internal_error)?
     } else {
         sqlx::query("INSERT INTO todos (description) VALUES ($1) RETURNING id")
-            .bind(template.1.get("description").unwrap())
+            .bind(template.form.get("description").unwrap())
             .execute(&pool)
             .await
             .map_err(internal_error)?

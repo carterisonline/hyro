@@ -2,11 +2,12 @@
 <img alt="HYRO logo" src="./assets/hyro-light.svg#gh-light-mode-only" align="right" height="130" width="200">
 
 ### HYRO
+
 noun  
 /ˈhɪr.oʊ/
 
 1. A : acronym for "Hypermedia Rust Orchestration"  
-   B : a crate that extends [Axum](https://github.com/tokio-rs/axum/) with new functionality, like
+   B : a crate that extends existing frameworks like [Axum](https://github.com/tokio-rs/axum/) with new functionality, like
    rendering [Jinja Templates](https://github.com/mitsuhiko/minijinja) on the server,
    [bundling css](https://github.com/parcel-bundler/lightningcss), and a better developer experience.  
    C : a powerful HMR framework for [hypermedia systems](https://hypermedia.systems/) like [HTMX](https://htmx.org/).  
@@ -14,14 +15,15 @@ noun
 
 ## Usage and Examples
 
-- More in-depth examples can be found at [examples/basic](examples/basic/) and [examples/crud](examples/crud/). Make sure you `cd` to the path containing
+- More in-depth examples can be found in the [examples folder](examples/). Make sure you `cd` to the path containing
   the templates and style folders before running or _you will get a file-not-found error!_
 
-Let's start with dependencies:
+Let's start with dependencies. We'll be using axum as our framework, and tokio as our runtime:
 
 ```sh
 cargo new hyro-getting-started
-cargo add hyro
+
+cargo add hyro -F framework-axum
 cargo add axum
 cargo add tokio -F full
 mkdir templates
@@ -44,7 +46,8 @@ use std::borrow::Cow;
 
 use axum::response::Html;
 use axum::{routing, Router, Server};
-use hyro::{context, RouterExt, Template};
+use hyro::prelude::*;
+use hyro::{context, Template};
 
 #[tokio::main]
 async fn main() {
@@ -52,7 +55,7 @@ async fn main() {
       .route("/hello", routing::get(hello))
       .into_service_with_hmr();
 
-   Server::from_tcp(hyro::bind("0.0.0.0:1380").await)).unwrap()
+   Server::from_tcp(hyro::bind("0.0.0.0:1380"))).unwrap()
         .serve(router)
         .await
         .unwrap();

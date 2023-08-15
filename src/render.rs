@@ -1,22 +1,15 @@
 use minijinja::value::{Value, ValueKind};
 use parking_lot::Mutex;
 use std::borrow::Cow;
-#[cfg(debug_assertions)]
-use std::path::Path;
 
-use axum::response::Html;
 use minijinja::Environment;
 use once_cell::sync::Lazy;
 use tap::Tap;
 
-#[cfg(debug_assertions)]
-use crate::{endpointof, template_dir};
+use crate::framework::*;
 use crate::{path_of_endpoint, template_extension, TEMPLATES};
 
-#[cfg(debug_assertions)]
-const HMR_ENABLED: bool = true;
-#[cfg(not(debug_assertions))]
-const HMR_ENABLED: bool = false;
+const HMR_ENABLED: bool = cfg!(debug_assertions);
 
 pub(crate) static ENVIRONMENT: Lazy<Mutex<Environment>> = Lazy::new(|| {
     Mutex::new(Environment::new().tap_mut(|env| {
@@ -87,17 +80,17 @@ fn inject_hmr(template: &str) -> String {
 pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
     template_name: S,
     value: minijinja::value::Value,
-) -> Html<Cow<'static, str>> {
+) -> RenderedTemplate {
     let template = TEMPLATES.get(template_name.as_ref()).unwrap();
 
     if template.can_skip_rendering {
-        return Html(Cow::Borrowed(template.source.as_str()));
+        return into_rendered_template(Cow::Borrowed(template.source.as_str()));
     } else {
         match ENVIRONMENT.lock().render_str(&template.source, value) {
-            Ok(t) => return Html(Cow::Owned(t)),
+            Ok(t) => return into_rendered_template(Cow::Owned(t)),
             Err(e) => {
                 error!("Error while rendering {}: {:?}", template_name.as_ref(), e);
-                return Html(Cow::Borrowed(""));
+                return into_rendered_template(Cow::Borrowed(""));
             }
         }
     }
@@ -107,7 +100,7 @@ pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
 pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
     template: S,
     value: minijinja::value::Value,
-) -> Html<Cow<'static, str>> {
+) -> RenderedTemplate {
     init_template(template.as_ref());
 
     let template_sources = TEMPLATES.sources.lock();
@@ -119,10 +112,10 @@ pub(crate) fn render<S: AsRef<str> + std::fmt::Debug>(
     );
 
     match maybe_rendered {
-        Ok(t) => Html(Cow::Owned(t)),
+        Ok(t) => into_rendered_template(Cow::Owned(t)),
         Err(e) => {
             error!("Error while rendering {}: {}", template.as_ref(), e);
-            Html(Cow::Borrowed(""))
+            into_rendered_template(Cow::Borrowed(""))
         }
     }
 }
@@ -132,8 +125,8 @@ fn init_template(template_name: &str) {
     let template_exists = TEMPLATES.sources.lock().contains_key(template_name);
     if !template_exists {
         reload_template(
-            &template_dir()
-                .join(Path::new(template_name.trim_start_matches('/')))
+            &crate::template_dir()
+                .join(std::path::Path::new(template_name.trim_start_matches('/')))
                 .display()
                 .to_string(),
         );
@@ -143,7 +136,7 @@ fn init_template(template_name: &str) {
 #[cfg(debug_assertions)]
 pub(crate) fn reload_template(template_name: &str) {
     let _path = &path_of_endpoint(template_name);
-    let path = Path::new(_path);
+    let path = std::path::Path::new(_path);
 
     let template_source = std::fs::read_to_string(path).unwrap();
 
@@ -157,7 +150,7 @@ pub(crate) fn reload_template(template_name: &str) {
     ) {
         Ok(_) => {
             TEMPLATES.sources.lock().insert(
-                endpointof(_path.trim_start_matches("templates"))
+                crate::endpointof(_path.trim_start_matches("templates"))
                     .unwrap()
                     .into(),
                 Mutex::new(template_source),

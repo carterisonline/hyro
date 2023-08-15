@@ -1,6 +1,6 @@
 [package]
 name = "hyro"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 description = "Hypermedia Rust Orchestration - a refreshing web framework"
 authors = ["Carter Reeb <me@carteris.online>"]
@@ -11,34 +11,6 @@ documentation = "https://docs.rs/hyro"
 readme = "README.md"
 categories = ["http-server", "web-programming", "template-engine"]
 
-[dependencies]
-axum = { version = "0.6", default-features = false, features = [
-    "ws",
-    "form",
-    "matched-path",
-] }
-futures = "0.3"
-if-addrs = "0.10"
-lightningcss = { version = "1.0.0-alpha.44", default-features = false, features = [
-    "bundler",
-    "grid",
-] }
-minijinja = { version = "1", default-features = false, features = [
-    "unstable_machinery",
-    "builtins",
-    "debug",
-    "deserialization",
-    "macros",
-] }
-notify = "6"
-once_cell = { version = "1", features = ["parking_lot"] }
-parking_lot = "0.12"
-serde_urlencoded = "0.7"
-tap = "1"
-tokio = { version = "1", default-features = false }
-tower-http = { version = "0.4", default-features = false, features = ["trace"] }
-walkdir = "2"
-
 [dev-dependencies]
 criterion = "0.5"
 
@@ -48,3 +20,103 @@ harness = false
 
 [workspace]
 members = ["examples/*"]
+
+[features]
+framework-axum = ["runtime-tokio", "dep:axum", "dep:tower-http"]
+framework-trillium = [
+    "dep:trillium",
+    "dep:trillium-router",
+    "dep:trillium-websockets",
+]
+runtime-tokio = ["dep:tokio", "dep:futures"]
+runtime-smol = [
+    "dep:async-channel",
+    "dep:async-global-executor",
+    "dep:async-io",
+    "dep:futures-lite",
+]
+
+# Base Dependencies -----------------------------------------------------------
+
+[dependencies]
+cfg-if = "1"
+if-addrs = "0.10"
+notify = "6"
+parking_lot = "0.12"
+once_cell = { version = "1", features = ["parking_lot"] }
+serde_urlencoded = "0.7"
+tap = "1"
+walkdir = "2"
+
+[dependencies.lightningcss]
+version = "1.0.0-alpha.44"
+default-features = false
+features = ["bundler", "grid"]
+
+[dependencies.minijinja]
+version = "1"
+default-features = false
+features = [
+    "unstable_machinery",
+    "builtins",
+    "debug",
+    "deserialization",
+    "macros",
+]
+
+# framework: axum -------------------------------------------------------------
+
+[dependencies.axum]
+version = "0.6"
+optional = true
+default-features = false
+features = ["ws", "form", "matched-path"]
+
+[dependencies.tower-http]
+version = "0.4"
+optional = true
+default-features = false
+features = ["trace"]
+
+# framework: trillium ---------------------------------------------------------
+
+[dependencies.trillium]
+version = "0.2"
+optional = true
+
+[dependencies.trillium-router]
+version = "0.3"
+optional = true
+
+[dependencies.trillium-websockets]
+version = "0.5"
+optional = true
+
+# runtime: tokio --------------------------------------------------------------
+
+[dependencies.tokio]
+version = "1"
+optional = true
+default-features = false
+
+[dependencies.futures]
+version = "0.3"
+optional = true
+
+# runtime: smol ---------------------------------------------------------------
+
+[dependencies.async-channel]
+version = "1"
+optional = true
+
+[dependencies.async-global-executor]
+version = "2"
+optional = true
+
+[dependencies.async-io]
+version = "1"
+optional = true
+
+[dependencies.futures-lite]
+version = "1"
+optional = true

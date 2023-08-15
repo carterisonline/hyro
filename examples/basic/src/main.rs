@@ -3,7 +3,8 @@ use std::borrow::Cow;
 use axum::response::Html;
 use axum::routing::get;
 
-use hyro::{context, RouterExt, Template};
+use hyro::prelude::*;
+use hyro::{context, Template};
 use tower_http::services::ServeDir;
 
 #[tokio::main]
@@ -17,7 +18,7 @@ async fn main() -> Result<(), std::io::Error> {
         .nest_service("/assets", ServeDir::new("assets"))
         .into_service_with_hmr();
 
-    axum::Server::from_tcp(hyro::bind("0.0.0.0:1380").await)
+    axum::Server::from_tcp(hyro::bind("0.0.0.0:1380"))
         .unwrap()
         .serve(router)
         .await

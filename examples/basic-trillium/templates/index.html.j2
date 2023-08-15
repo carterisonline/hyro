@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYRO Trillium Example</title>
+</head>
+
+<body>
+    {% if form %}
+    <h1>Hello, {{form.name}}!</h1>
+    {% else %}
+    <h1>Add <code>?name=&lt;your name here&gt;</code> to the URL!</h1>
+    {% endif %}
+
+</body>
+
+</html>

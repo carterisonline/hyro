@@ -1,3 +1,26 @@
+## 0.4.0
+
+### **BREAKING CHANGES**
+
+- Frameworks and runtimes need to be manually selected via. a feature. To keep using Tokio and Axum, use the
+  `framework-axum` feature.
+- If previously using Axum, remove any imports of `RouterExt`. Required traits for each framework are included
+  by using `use hyro::prelude::*`.
+- `hyro::bind` is no longer `async`.
+
+### Modular frameworks and runtimes
+
+Axum and Tokio work very well together - creating a wicked combo of high performance thanks to Tokio's scheduler,
+and a fully-featured and practical API (that works well with HYRO) thanks to Axum. However, this combination
+has a large overhead, and won't work entirely on embedded platforms. It's sometimes just not what users want!
+HYRO's API has been reorganized to allow for modular implementation of frameworks and runtimes via. feature flags.
+
+- `framework-trillium` enables support for the [Trillium](https://github.com/trillium-rs/trillium) framework, a
+  composable toolkit perfect for more lightweight web applications. All of HYRO's HMR and bundling features are
+  supported, with HMR completing at around 5x the speed of Axum!
+- `runtime-smol` enables support for the [smol](https://github.com/smol-rs/smol) runtime, perfect for embedded
+  applications.
+
 ## 0.3.2
 
 ### Minor Changes

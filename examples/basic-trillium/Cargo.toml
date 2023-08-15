@@ -1,0 +1,11 @@
+[package]
+name = "example-basic-trillium"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+hyro = { path = "../../", features = ["framework-trillium", "runtime-smol"] }
+trillium = "0.2"
+trillium-router = "0.3"
+trillium-smol = "0.3"

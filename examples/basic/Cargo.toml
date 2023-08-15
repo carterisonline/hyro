@@ -7,5 +7,5 @@ publish = false
 [dependencies]
 axum = "0.6"
 tokio = { version = "1", features = ["full"] }
-hyro = { path = "../../" }
+hyro = { path = "../../", features = ["framework-axum"] }
 tower-http = { version = "0.4", default-features = false, features = ["fs"] }
